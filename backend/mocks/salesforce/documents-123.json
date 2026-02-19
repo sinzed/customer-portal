@@ -1,0 +1,28 @@
+{
+  "documents": [
+    {
+      "document_id": "069000000000001AAA",
+      "customer_id": "123",
+      "name": "Angebot_2024_01_15.pdf",
+      "type": "Angebot",
+      "download_url": "/api/documents/069000000000001AAA/download",
+      "created_date": "2024-01-15T10:30:00"
+    },
+    {
+      "document_id": "069000000000002AAA",
+      "customer_id": "123",
+      "name": "Förderzusage_BEG.pdf",
+      "type": "Förderzusage",
+      "download_url": "/api/documents/069000000000002AAA/download",
+      "created_date": "2024-01-20T14:15:00"
+    },
+    {
+      "document_id": "069000000000003AAA",
+      "customer_id": "123",
+      "name": "Entsorgungsnachweis_Öltank.pdf",
+      "type": "Entsorgungsnachweis",
+      "download_url": "/api/documents/069000000000003AAA/download",
+      "created_date": "2024-02-01T09:00:00"
+    }
+  ]
+}

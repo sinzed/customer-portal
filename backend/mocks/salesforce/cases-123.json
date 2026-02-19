@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "case_id": "500000000000001AAA",
+      "customer_id": "123",
+      "subject": "Frage zur Installation",
+      "description": "Wann kann der Termin für die Installation vereinbart werden?",
+      "type": "Installation",
+      "status": "In Progress",
+      "created_date": "2024-01-10T08:00:00"
+    },
+    {
+      "case_id": "500000000000002AAA",
+      "customer_id": "123",
+      "subject": "Angebot anpassen",
+      "description": "Können wir die Leistung X hinzufügen?",
+      "type": "Angebot",
+      "status": "Closed",
+      "created_date": "2024-01-05T12:30:00"
+    },
+    {
+      "case_id": "500000000000003AAA",
+      "customer_id": "123",
+      "subject": "Wartungstermin anfragen",
+      "description": "Ich benötige einen Wartungstermin für nächsten Monat.",
+      "type": "Wartung",
+      "status": "New",
+      "created_date": "2024-02-05T16:45:00"
+    }
+  ]
+}
