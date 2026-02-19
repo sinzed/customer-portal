@@ -135,6 +135,48 @@ export default function Dashboard() {
     });
   };
 
+  const handleDownload = async (doc: Document): Promise<void> => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        alert('Sie müssen angemeldet sein, um Dokumente herunterzuladen.');
+        return;
+      }
+
+      const fullUrl = doc.download_url.startsWith('http') 
+        ? doc.download_url 
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${doc.download_url}`;
+      
+      // Fetch the PDF with authentication
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download failed:', response.status, errorText);
+        throw new Error(`Download fehlgeschlagen: ${response.status}`);
+      }
+
+      // Get the blob and create download link
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = doc.name;
+      window.document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      window.document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      alert(`Fehler beim Herunterladen des Dokuments: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}. Bitte versuchen Sie es erneut.`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -240,7 +282,7 @@ export default function Dashboard() {
                         {doc.type} • {doc.created_date ? formatDate(doc.created_date) : '-'}
                       </div>
                     </div>
-                    <button className="btn-open" onClick={() => window.open(doc.download_url, '_blank')}>
+                    <button className="btn-open" onClick={() => handleDownload(doc)}>
                       Öffnen
                     </button>
                   </div>

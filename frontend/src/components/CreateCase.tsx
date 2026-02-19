@@ -1,5 +1,6 @@
 import { useState, FormEvent, ChangeEvent } from 'react';
-import { api } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { api, ApiError } from '../services/api';
 
 /**
  * Create Case Form Component
@@ -24,6 +25,7 @@ interface FormErrors {
 type SubmitStatus = 'success' | 'error' | null;
 
 export default function CreateCase() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     subject: '',
     description: '',
@@ -31,6 +33,7 @@ export default function CreateCase() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
@@ -62,6 +65,7 @@ export default function CreateCase() {
 
     setSubmitting(true);
     setSubmitStatus(null);
+    setErrorMessage(null);
 
     try {
       const result = await api.createCase({
@@ -72,10 +76,17 @@ export default function CreateCase() {
       setSubmitStatus('success');
       setFormData({ subject: '', description: '' });
       
-      // In production, we might redirect or refresh the cases list
-      console.log('Case created:', result);
+      // Redirect to cases list after 2 seconds to show the new case
+      setTimeout(() => {
+        navigate('/cases', { state: { refreshCases: true } });
+      }, 2000);
     } catch (err) {
       setSubmitStatus('error');
+      if (err instanceof ApiError) {
+        setErrorMessage(err.message);
+      } else {
+        setErrorMessage('Fehler beim Erstellen des Tickets. Bitte versuchen Sie es erneut.');
+      }
       console.error('Error creating case:', err);
     } finally {
       setSubmitting(false);
@@ -121,13 +132,13 @@ export default function CreateCase() {
 
         {submitStatus === 'success' && (
           <div className="success-message">
-            ✓ Ticket erfolgreich erstellt!
+            ✓ Ticket erfolgreich erstellt! Sie werden zur Ticket-Übersicht weitergeleitet...
           </div>
         )}
 
         {submitStatus === 'error' && (
           <div className="error-message">
-            ✗ Fehler beim Erstellen des Tickets. Bitte versuchen Sie es erneut.
+            ✗ {errorMessage || 'Fehler beim Erstellen des Tickets. Bitte versuchen Sie es erneut.'}
           </div>
         )}
 

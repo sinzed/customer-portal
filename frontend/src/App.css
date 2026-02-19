@@ -118,6 +118,28 @@ button {
   cursor: not-allowed;
 }
 
+.btn-primary {
+  background-color: #E91E63;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #C2185B;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
 /* Status Badge */
 .status-badge {
   display: inline-block;

@@ -38,10 +38,47 @@ export default function Documents() {
     }
   };
 
-  const handleDownload = (document: Document): void => {
-    // In production, this would trigger actual file download
-    // For MVP, we simulate download
-    alert(`Downloading: ${document.name}\n\nIn production, this would download from: ${document.download_url}`);
+  const handleDownload = async (doc: Document): Promise<void> => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        alert('Sie müssen angemeldet sein, um Dokumente herunterzuladen.');
+        return;
+      }
+
+      const fullUrl = doc.download_url.startsWith('http') 
+        ? doc.download_url 
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${doc.download_url}`;
+      
+      // Fetch the PDF with authentication
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download failed:', response.status, errorText);
+        throw new Error(`Download fehlgeschlagen: ${response.status} ${response.statusText}`);
+      }
+
+      // Get the blob and create download link
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = doc.name;
+      window.document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      window.document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unbekannter Fehler';
+      alert(`Fehler beim Herunterladen des Dokuments: ${errorMessage}. Bitte versuchen Sie es erneut.`);
+    }
   };
 
   if (loading) {
@@ -65,10 +102,19 @@ export default function Documents() {
 
   return (
     <div className="container">
-      <h1>Dokumente</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h1>Dokumente {documents.length > 0 && <span style={{ fontSize: '1rem', color: '#6c757d', fontWeight: 'normal' }}>({documents.length})</span>}</h1>
+        {documents.length > 0 && (
+          <button onClick={loadDocuments} className="btn-secondary" style={{ marginRight: '0.5rem' }}>
+            Aktualisieren
+          </button>
+        )}
+      </div>
       
       {documents.length === 0 ? (
-        <p>Keine Dokumente vorhanden.</p>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Keine Dokumente vorhanden.</p>
+        </div>
       ) : (
         <div className="document-list">
           <table>
@@ -83,11 +129,28 @@ export default function Documents() {
             <tbody>
               {documents.map((doc) => (
                 <tr key={doc.document_id}>
-                  <td>{doc.name}</td>
-                  <td>{doc.type}</td>
+                  <td><strong>{doc.name}</strong></td>
+                  <td>
+                    <span style={{ 
+                      padding: '0.25rem 0.75rem', 
+                      borderRadius: '12px', 
+                      backgroundColor: '#e9ecef', 
+                      color: '#495057',
+                      fontSize: '0.85rem',
+                      fontWeight: '500'
+                    }}>
+                      {doc.type}
+                    </span>
+                  </td>
                   <td>
                     {doc.created_date
-                      ? new Date(doc.created_date).toLocaleDateString('de-DE')
+                      ? new Date(doc.created_date).toLocaleDateString('de-DE', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
                       : '-'}
                   </td>
                   <td>

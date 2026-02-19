@@ -106,6 +106,8 @@ class SalesforceService:
         
         For MVP, we simulate by:
         - Generating a mock case ID
+        - Saving temporarily as "eingehend" (incoming)
+        - Sending to Salesforce mock endpoint (new-case.json or console)
         - Appending to mock file
         - Returning the created case
         """
@@ -113,41 +115,102 @@ class SalesforceService:
         import uuid
         case_id = f"500{str(uuid.uuid4()).replace('-', '')[:15]}"
         
-        # Create case object
+        # Create case object with status "eingehend" (incoming) initially
         new_case = Case(
             case_id=case_id,
             customer_id=customer_id,
             subject=case_request.subject,
             description=case_request.description,
             type="Customer Request",
-            status="New",
+            status="eingehend",  # Temporarily saved as "incoming"
             created_date=datetime.now()
         )
         
-        # In production: POST to Salesforce API
-        # For MVP: Append to mock file
-        mock_file = self.mock_data_dir / f"cases-{customer_id}.json"
+        # ============================================
+        # MAPPING LOGIC: Transform to Salesforce format
+        # ============================================
+        # This demonstrates how we would map our internal DTO to Salesforce format
+        salesforce_case_data = {
+            "Id": new_case.case_id,
+            "AccountId": new_case.customer_id,
+            "Subject": new_case.subject,
+            "Description": new_case.description or "",
+            "Type": new_case.type,
+            "Status": "New",  # Salesforce status (mapped from "eingehend")
+            "Origin": "Web",
+            "CreatedDate": new_case.created_date.isoformat()
+        }
         
+        # Send to Salesforce Mock Endpoint
+        # Option 1: Save to new-case.json file (simulating Salesforce API call)
+        new_case_file = self.mock_data_dir / "new-case.json"
+        with open(new_case_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                "success": True,
+                "id": salesforce_case_data["Id"],
+                "salesforce_case": salesforce_case_data
+            }, f, indent=2, ensure_ascii=False)
+        
+        # Option 2: Also log to console to make mapping logic visible
+        print("\n" + "="*60)
+        print("SALESFORCE MOCK ENDPOINT: New Case Received")
+        print("="*60)
+        print(f"Mapping from internal DTO to Salesforce format:")
+        print(f"  Internal Status: '{new_case.status}' → Salesforce Status: '{salesforce_case_data['Status']}'")
+        print(f"  Internal Type: '{new_case.type}' → Salesforce Type: '{salesforce_case_data['Type']}'")
+        print(f"  Customer ID: '{new_case.customer_id}' → Salesforce AccountId: '{salesforce_case_data['AccountId']}'")
+        print(f"\nSalesforce Case Data:")
+        print(json.dumps(salesforce_case_data, indent=2, ensure_ascii=False))
+        print("="*60 + "\n")
+        
+        # Save temporarily locally (as "eingehend")
+        # In production, this would be in a temporary queue/database
+        temp_file = self.mock_data_dir / f"incoming-cases-{customer_id}.json"
+        if temp_file.exists():
+            with open(temp_file, 'r', encoding='utf-8') as f:
+                temp_data = json.load(f)
+        else:
+            temp_data = {"incoming_cases": []}
+        
+        temp_data['incoming_cases'].append({
+            "case_id": new_case.case_id,
+            "customer_id": new_case.customer_id,
+            "subject": new_case.subject,
+            "description": new_case.description,
+            "type": new_case.type,
+            "status": new_case.status,  # "eingehend"
+            "created_date": new_case.created_date.isoformat(),
+            "salesforce_mapped": salesforce_case_data
+        })
+        
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            json.dump(temp_data, f, indent=2, ensure_ascii=False)
+        
+        # Also append to main cases file (for GET endpoint)
+        mock_file = self.mock_data_dir / f"cases-{customer_id}.json"
         if mock_file.exists():
-            with open(mock_file, 'r') as f:
+            with open(mock_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         else:
             data = {"cases": []}
         
-        # Append new case
+        # Append new case (with status updated to match Salesforce response)
         data['cases'].append({
             "case_id": new_case.case_id,
             "customer_id": new_case.customer_id,
             "subject": new_case.subject,
             "description": new_case.description,
             "type": new_case.type,
-            "status": new_case.status,
+            "status": salesforce_case_data["Status"],  # Use Salesforce status
             "created_date": new_case.created_date.isoformat()
         })
         
         # Write back to mock file
-        with open(mock_file, 'w') as f:
-            json.dump(data, f, indent=2)
+        with open(mock_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        
+        # Update the case status to match what Salesforce would return
+        new_case.status = salesforce_case_data["Status"]
         
         # In production, we would also:
         # - Log the case creation

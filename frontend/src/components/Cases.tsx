@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api, ApiError } from '../services/api';
 import type { Case } from '../types/api';
 
@@ -13,6 +14,8 @@ import type { Case } from '../types/api';
  * - Real-time updates
  */
 export default function Cases() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +23,15 @@ export default function Cases() {
   useEffect(() => {
     loadCases();
   }, []);
+
+  // Refresh cases when navigating back from create-case
+  useEffect(() => {
+    if (location.state?.refreshCases) {
+      loadCases();
+      // Clear the state to prevent unnecessary refreshes
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   const loadCases = async (): Promise<void> => {
     try {
@@ -44,6 +56,7 @@ export default function Cases() {
       'In Progress': '#FF9800',
       'Closed': '#4CAF50',
       'Escalated': '#F44336',
+      'eingehend': '#9C27B0', // Purple for incoming status
     };
     return statusColors[status] || '#757575';
   };
@@ -69,10 +82,25 @@ export default function Cases() {
 
   return (
     <div className="container">
-      <h1>Tickets / Cases</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h1>Tickets / Cases</h1>
+        <div>
+          <button onClick={loadCases} className="btn-secondary" style={{ marginRight: '0.5rem' }}>
+            Aktualisieren
+          </button>
+          <button onClick={() => navigate('/create-case')} className="btn-primary">
+            Neues Ticket erstellen
+          </button>
+        </div>
+      </div>
       
       {cases.length === 0 ? (
-        <p>Keine Tickets vorhanden.</p>
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Keine Tickets vorhanden.</p>
+          <button onClick={() => navigate('/create-case')} className="btn-primary" style={{ marginTop: '1rem' }}>
+            Erstes Ticket erstellen
+          </button>
+        </div>
       ) : (
         <div className="cases-list">
           <table>
