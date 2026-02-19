@@ -18,9 +18,30 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// For MVP, we use a hardcoded customer ID
-// In production, this would come from authentication context
-const DEFAULT_CUSTOMER_ID = '123';
+const TOKEN_KEY = 'auth_token';
+
+/**
+ * Get authentication token from localStorage
+ */
+function getAuthToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+/**
+ * Get user ID from stored user data
+ */
+function getUserId(): string | null {
+  const userStr = localStorage.getItem('auth_user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      return user.user_id || null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -34,41 +55,82 @@ export class ApiError extends Error {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
+    // Handle 401 Unauthorized - token might be invalid
+    if (response.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('auth_user');
+      // Redirect to login will be handled by ProtectedRoute
+    }
     const errorData = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(errorData.detail || 'API request failed', response.status);
   }
   return response.json() as Promise<T>;
 }
 
+/**
+ * Create headers with authentication token if available
+ */
+function createHeaders(includeAuth: boolean = true): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (includeAuth) {
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  return headers;
+}
+
 export const api = {
   /**
    * Get all documents for a customer
+   * Uses authenticated user's ID if customerId is not provided
    */
-  async getDocuments(customerId: string = DEFAULT_CUSTOMER_ID): Promise<DocumentListResponse> {
-    const response = await fetch(`${API_BASE_URL}/customer/${customerId}/documents`);
+  async getDocuments(customerId?: string): Promise<DocumentListResponse> {
+    const userId = customerId || getUserId();
+    if (!userId) {
+      throw new ApiError('User not authenticated', 401);
+    }
+    const response = await fetch(`${API_BASE_URL}/customer/${userId}/documents`, {
+      headers: createHeaders(),
+    });
     return handleResponse<DocumentListResponse>(response);
   },
 
   /**
    * Get all cases/tickets for a customer
+   * Uses authenticated user's ID if customerId is not provided
    */
-  async getCases(customerId: string = DEFAULT_CUSTOMER_ID): Promise<CaseListResponse> {
-    const response = await fetch(`${API_BASE_URL}/customer/${customerId}/cases`);
+  async getCases(customerId?: string): Promise<CaseListResponse> {
+    const userId = customerId || getUserId();
+    if (!userId) {
+      throw new ApiError('User not authenticated', 401);
+    }
+    const response = await fetch(`${API_BASE_URL}/customer/${userId}/cases`, {
+      headers: createHeaders(),
+    });
     return handleResponse<CaseListResponse>(response);
   },
 
   /**
    * Create a new case/ticket
+   * Uses authenticated user's ID if customerId is not provided
    */
   async createCase(
-    customerId: string,
-    caseData: CaseCreateRequest
+    caseData: CaseCreateRequest,
+    customerId?: string
   ): Promise<CaseCreateResponse> {
-    const response = await fetch(`${API_BASE_URL}/customer/${customerId}/cases`, {
+    const userId = customerId || getUserId();
+    if (!userId) {
+      throw new ApiError('User not authenticated', 401);
+    }
+    const response = await fetch(`${API_BASE_URL}/customer/${userId}/cases`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createHeaders(),
       body: JSON.stringify(caseData),
     });
     return handleResponse<CaseCreateResponse>(response);

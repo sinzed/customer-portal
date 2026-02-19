@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from app.models.case import CaseListResponse, CaseCreateRequest, CaseCreateResponse
+from app.models.user import User
+from app.core.dependencies import get_current_user
 from app.services.salesforce_service import SalesforceService
 
 router = APIRouter(prefix="/customer", tags=["cases"])
@@ -7,12 +9,23 @@ salesforce_service = SalesforceService()
 
 
 @router.get("/{customer_id}/cases", response_model=CaseListResponse)
-async def get_customer_cases(customer_id: str):
+async def get_customer_cases(
+    customer_id: str,
+    current_user: User = Depends(get_current_user)
+):
     """
     Retrieve all cases/tickets for a customer.
     
     Returns cases from Salesforce (mocked for MVP).
+    Requires authentication. Users can only access their own cases.
     """
+    # Ensure user can only access their own data
+    if str(current_user.user_id) != customer_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only access your own cases"
+        )
+    
     try:
         cases = salesforce_service.get_customer_cases(customer_id)
         return CaseListResponse(cases=cases)
@@ -21,15 +34,27 @@ async def get_customer_cases(customer_id: str):
 
 
 @router.post("/{customer_id}/cases", response_model=CaseCreateResponse, status_code=status.HTTP_201_CREATED)
-async def create_customer_case(customer_id: str, case_request: CaseCreateRequest):
+async def create_customer_case(
+    customer_id: str,
+    case_request: CaseCreateRequest,
+    current_user: User = Depends(get_current_user)
+):
     """
     Create a new case/ticket for a customer.
     
     Validates input and creates case in Salesforce (mocked for MVP).
+    Requires authentication. Users can only create cases for themselves.
     
     - **subject**: Required. Brief description of the issue/request
     - **description**: Optional. Detailed description
     """
+    # Ensure user can only create cases for themselves
+    if str(current_user.user_id) != customer_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only create cases for yourself"
+        )
+    
     # Validation is handled by Pydantic model
     # Additional business logic validation could go here
     

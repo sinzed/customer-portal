@@ -29,14 +29,16 @@ from app.core.dependencies import get_current_user
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """
-    Register a new user.
+    Register a new user and automatically log them in.
     
     - **email**: Valid email address (must be unique)
     - **password**: Password (minimum 8 characters)
-    - **role**: User role (default: "user")
+    - **role**: User role (default: "customer")
+    
+    Returns an access token for immediate authentication.
     """
     # Check if user already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
@@ -48,24 +50,50 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
             detail="Email already registered"
         )
     
-    # Create new user
-    hashed_password = get_password_hash(user_data.password)
+    # Validate password length (bcrypt has 72-byte limit)
+    password_bytes = len(user_data.password.encode('utf-8'))
+    if password_bytes > 72:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password cannot be longer than 72 bytes"
+        )
+    
+    # Create new user with customer role by default
+    try:
+        hashed_password = get_password_hash(user_data.password)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    user_role = user_data.role if user_data.role else "customer"
     new_user = User(
         email=user_data.email,
         password=hashed_password,
-        role=user_data.role,
+        role=user_role,
     )
     
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
     
-    return UserResponse(
-        user_id=new_user.user_id,
-        email=new_user.email,
-        role=new_user.role,
-        created_at=new_user.created_at,
-        updated_at=new_user.updated_at,
+    # Create access token for automatic login
+    access_token = create_access_token(data={"sub": str(new_user.user_id), "email": new_user.email, "role": new_user.role})
+    
+    # Store token in user record (optional - for refresh token storage)
+    new_user.token = access_token
+    await db.commit()
+    
+    return TokenResponse(
+        access_token=access_token,
+        user=UserResponse(
+            user_id=new_user.user_id,
+            email=new_user.email,
+            role=new_user.role,
+            created_at=new_user.created_at,
+            updated_at=new_user.updated_at,
+        )
     )
 
 

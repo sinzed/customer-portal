@@ -9,17 +9,22 @@ from uuid import UUID
 
 class UserBase(BaseModel):
     email: EmailStr
-    role: str = Field(default="user", description="User role (user, admin, customer)")
+    role: str = Field(default="customer", description="User role (user, admin, customer)")
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    password: str = Field(
+        ..., 
+        min_length=8, 
+        max_length=72,
+        description="Password must be between 8 and 72 characters"
+    )
 
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[str] = None
-    password: Optional[str] = Field(None, min_length=8)
+    password: Optional[str] = Field(None, min_length=8, max_length=72)
 
 
 class UserResponse(UserBase):
@@ -48,9 +53,9 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordReset(BaseModel):
     token: str
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8, max_length=72)
 
 
 class PasswordChange(BaseModel):
     current_password: str
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8, max_length=72)

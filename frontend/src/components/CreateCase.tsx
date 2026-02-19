@@ -64,7 +64,7 @@ export default function CreateCase() {
     setSubmitStatus(null);
 
     try {
-      const result = await api.createCase('123', {
+      const result = await api.createCase({
         subject: formData.subject.trim(),
         description: formData.description.trim() || undefined,
       });
