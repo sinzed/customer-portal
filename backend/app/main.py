@@ -6,9 +6,18 @@ and Salesforce. In production, this would handle authentication, rate limiting,
 and complex Salesforce API interactions.
 """
 
+# Load environment variables from .env file FIRST, before any other imports
+from dotenv import load_dotenv
+import os
+
+# Load .env file from the backend directory
+env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+load_dotenv(dotenv_path=env_path)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import documents, cases
+from app.routes import documents, cases, auth
+from app.database import engine, Base
 
 app = FastAPI(
     title="Customer Portal API",
@@ -18,8 +27,6 @@ app = FastAPI(
 
 # CORS configuration for frontend access
 # In production, restrict origins to specific domains
-import os
-
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
     "http://localhost:5173,http://localhost:3000,https://panel.powerme.space"
@@ -34,6 +41,7 @@ app.add_middleware(
 )
 
 # Register routes
+app.include_router(auth.router)
 app.include_router(documents.router)
 app.include_router(cases.router)
 
@@ -52,3 +60,10 @@ async def root():
 async def health():
     """Health check endpoint"""
     return {"status": "healthy"}
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup"""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
