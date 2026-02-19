@@ -13,6 +13,8 @@ REMOTE_HOST="${REMOTE_HOST:-}"
 REMOTE_USER="${REMOTE_USER:-root}"
 REMOTE_DIR="${REMOTE_DIR:-/var/www/html/panel}"
 LOCAL_DEPLOY_DIR="${LOCAL_DEPLOY_DIR:-/var/www/html/panel}"
+# API URL for production - defaults to api.powerme.space (can be overridden via VITE_API_URL env var)
+VITE_API_URL="${VITE_API_URL:-https://api.powerme.space}"
 
 # Get the script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -77,8 +79,19 @@ echo "Installing npm dependencies..."
 cd "$SCRIPT_DIR"
 npm install
 
-# Build the project
-echo "Building frontend project..."
+# Ensure .env.production exists with the correct API URL
+echo "Configuring production environment..."
+ENV_PROD_FILE="$SCRIPT_DIR/.env.production"
+if [ ! -f "$ENV_PROD_FILE" ] || ! grep -q "VITE_API_URL" "$ENV_PROD_FILE" 2>/dev/null; then
+    echo "Creating/updating .env.production file..."
+    echo "# Production environment variables" > "$ENV_PROD_FILE"
+    echo "# This file is automatically loaded by Vite when running 'npm run build'" >> "$ENV_PROD_FILE"
+    echo "VITE_API_URL=$VITE_API_URL" >> "$ENV_PROD_FILE"
+fi
+echo "Using API URL: $VITE_API_URL"
+
+# Build the project (Vite automatically uses production mode and loads .env.production)
+echo "Building frontend project for production..."
 npm run build
 
 # Check if build was successful
