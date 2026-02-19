@@ -30,6 +30,11 @@ dist-ssr/
 .env
 .env.local
 .env.*.local
+.env.production
+letsencrypt/
+
+# CI/CD
+.github/workflows/*.local.yml
 
 # OS
 .DS_Store
