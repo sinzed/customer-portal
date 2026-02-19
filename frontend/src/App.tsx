@@ -5,9 +5,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import Login from './components/Login';
 import Register from './components/Register';
+import Dashboard from './components/Dashboard';
 import Documents from './components/Documents';
 import Cases from './components/Cases';
 import CreateCase from './components/CreateCase';
+import Appointments from './components/Appointments';
 import './App.css';
 
 /**
@@ -47,7 +49,7 @@ function App() {
                 path="/"
                 element={
                   <ProtectedRoute>
-                    <Navigate to="/documents" replace />
+                    <Dashboard />
                   </ProtectedRoute>
                 }
               />
@@ -72,6 +74,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CreateCase />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/appointments"
+                element={
+                  <ProtectedRoute>
+                    <Appointments />
                   </ProtectedRoute>
                 }
               />
