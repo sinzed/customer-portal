@@ -59,10 +59,6 @@ export default function CreateCase() {
       newErrors.subject = 'Betreff ist erforderlich';
     }
     
-    if (!formData.description || !formData.description.trim()) {
-      newErrors.description = 'Beschreibung ist erforderlich';
-    }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -129,9 +125,7 @@ export default function CreateCase() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="description">
-            Beschreibung <span className="required">*</span>
-          </label>
+          <label htmlFor="description">Beschreibung (optional)</label>
           <textarea
             id="description"
             name="description"
@@ -140,15 +134,10 @@ export default function CreateCase() {
             rows={6}
             placeholder="Detaillierte Beschreibung des Anliegens"
             disabled={submitting}
-            className={errors.description ? 'error' : ''}
+            className=""
             maxLength={500}
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', minHeight: '1.5rem' }}>
-            {errors.description ? (
-              <span className="error-message">{errors.description}</span>
-            ) : (
-              <span></span>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
             <span style={{ 
               fontSize: '0.875rem', 
               color: formData.description.length > 450 ? '#dc3545' : '#6c757d',
@@ -174,7 +163,7 @@ export default function CreateCase() {
         <button
           type="submit"
           className="btn-submit"
-          disabled={submitting || !formData.subject.trim() || !formData.description.trim()}
+          disabled={submitting || !formData.subject.trim()}
         >
           {submitting ? 'Wird gesendet...' : 'Ticket erstellen'}
         </button>
