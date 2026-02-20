@@ -91,10 +91,15 @@ export default function Cases() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>Tickets / Cases</h1>
         <div>
-          <button onClick={loadCases} className="btn-secondary" style={{ marginRight: '0.5rem' }}>
-            Aktualisieren
-          </button>
-          <button onClick={() => navigate('/create-case')} className="btn-primary">
+          <button 
+            onClick={() => navigate('/create-case')} 
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 5V19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             Neues Ticket erstellen
           </button>
         </div>
@@ -103,7 +108,21 @@ export default function Cases() {
       {cases.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <p>Keine Tickets vorhanden.</p>
-          <button onClick={() => navigate('/create-case')} className="btn-primary" style={{ marginTop: '1rem' }}>
+          <button 
+            onClick={() => navigate('/create-case')} 
+            className="btn-primary" 
+            style={{ 
+              marginTop: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              margin: '1rem auto 0'
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 5V19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             Erstes Ticket erstellen
           </button>
         </div>
