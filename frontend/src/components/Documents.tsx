@@ -30,7 +30,14 @@ export default function Documents() {
       setLoading(true);
       setError(null);
       const data = await api.getDocuments();
-      setDocuments(data.documents || []);
+      // Sort documents by created_date descending (most recent first)
+      const sortedDocuments = (data.documents || []).sort((a, b) => {
+        if (!a.created_date && !b.created_date) return 0;
+        if (!a.created_date) return 1; // Put items without date at the end
+        if (!b.created_date) return -1;
+        return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+      });
+      setDocuments(sortedDocuments);
     } catch (err) {
       const errorMessage = err instanceof ApiError 
         ? err.message 

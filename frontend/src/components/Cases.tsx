@@ -38,7 +38,13 @@ export default function Cases() {
       setLoading(true);
       setError(null);
       const data = await api.getCases();
-      setCases(data.cases || []);
+      // Sort cases by created_date descending (most recent first)
+      const sortedCases = (data.cases || []).sort((a, b) => {
+        const dateA = new Date(a.created_date).getTime();
+        const dateB = new Date(b.created_date).getTime();
+        return dateB - dateA; // Descending order (newest first)
+      });
+      setCases(sortedCases);
     } catch (err) {
       const errorMessage = err instanceof ApiError 
         ? err.message 
