@@ -59,7 +59,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 401) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('auth_user');
-      // Redirect to login will be handled by ProtectedRoute
+      // Dispatch event to notify components about authentication failure
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      // Navigate to login page
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
     }
     const errorData = await response.json().catch(() => ({ detail: response.statusText }));
     throw new ApiError(errorData.detail || 'API request failed', response.status);
@@ -96,6 +101,12 @@ export const api = {
   async getDocuments(customerId?: string): Promise<DocumentListResponse> {
     const userId = customerId || getUserId();
     if (!userId) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('auth_user');
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
       throw new ApiError('User not authenticated', 401);
     }
     const response = await fetch(`${API_BASE_URL}/customer/${userId}/documents`, {
@@ -111,6 +122,12 @@ export const api = {
   async getCases(customerId?: string): Promise<CaseListResponse> {
     const userId = customerId || getUserId();
     if (!userId) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('auth_user');
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
       throw new ApiError('User not authenticated', 401);
     }
     const response = await fetch(`${API_BASE_URL}/customer/${userId}/cases`, {
@@ -129,6 +146,12 @@ export const api = {
   ): Promise<CaseCreateResponse> {
     const userId = customerId || getUserId();
     if (!userId) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('auth_user');
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
       throw new ApiError('User not authenticated', 401);
     }
     const response = await fetch(`${API_BASE_URL}/customer/${userId}/cases`, {
@@ -150,6 +173,12 @@ export const api = {
   ): Promise<Document> {
     const userId = customerId || getUserId();
     if (!userId) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('auth_user');
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
       throw new ApiError('User not authenticated', 401);
     }
 

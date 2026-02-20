@@ -4,7 +4,7 @@
  * Manages authentication state and provides auth methods throughout the app.
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import type { User, LoginRequest, RegisterRequest, AuthResponse } from '../types/auth';
 import { authApi } from '../services/auth';
 
@@ -28,6 +28,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const logout = useCallback((): void => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }, []);
+
   // Load auth state from localStorage on mount
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_KEY);
@@ -46,6 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
+  // Listen for logout events from API service
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      logout();
+    };
+
+    window.addEventListener('auth:logout', handleLogoutEvent);
+    return () => {
+      window.removeEventListener('auth:logout', handleLogoutEvent);
+    };
+  }, [logout]);
+
   const login = async (credentials: LoginRequest): Promise<void> => {
     const response: AuthResponse = await authApi.login(credentials);
     setToken(response.access_token);
@@ -60,13 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
     localStorage.setItem(TOKEN_KEY, response.access_token);
     localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-  };
-
-  const logout = (): void => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
   };
 
   const value: AuthContextType = {
