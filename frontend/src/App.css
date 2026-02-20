@@ -244,6 +244,21 @@ p {
 
 .auth-card h1 {
   margin-bottom: 0.5rem;
+}
+
+/* Spinning animation for loading icons */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
   color: #2c3e50;
   text-align: center;
 }

@@ -20,6 +20,7 @@ export default function Documents() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [documentName, setDocumentName] = useState<string>('');
 
   useEffect(() => {
     loadDocuments();
@@ -53,6 +54,11 @@ export default function Documents() {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      // Set default name from filename if name field is empty
+      if (!documentName) {
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+        setDocumentName(nameWithoutExt);
+      }
       setUploadError(null);
       setUploadSuccess(false);
     }
@@ -61,6 +67,11 @@ export default function Documents() {
   const handleUpload = async (): Promise<void> => {
     if (!selectedFile) {
       setUploadError('Bitte wählen Sie eine Datei aus.');
+      return;
+    }
+
+    if (!documentName.trim()) {
+      setUploadError('Bitte geben Sie einen Namen für das Dokument ein.');
       return;
     }
 
@@ -82,10 +93,16 @@ export default function Documents() {
         documentType = 'Spreadsheet';
       }
 
-      await api.uploadDocument(selectedFile, documentType);
+      // Create a new File object with the custom name
+      const fileExtOriginal = selectedFile.name.split('.').pop();
+      const customFileName = `${documentName.trim()}${fileExtOriginal ? '.' + fileExtOriginal : ''}`;
+      const renamedFile = new File([selectedFile], customFileName, { type: selectedFile.type });
+
+      await api.uploadDocument(renamedFile, documentType);
       
       setUploadSuccess(true);
       setSelectedFile(null);
+      setDocumentName('');
       
       // Reset file input
       const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -177,13 +194,6 @@ export default function Documents() {
     <div className="container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>Dokumente {documents.length > 0 && <span style={{ fontSize: '1rem', color: '#6c757d', fontWeight: 'normal' }}>({documents.length})</span>}</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {documents.length > 0 && (
-            <button onClick={loadDocuments} className="btn-secondary">
-              Aktualisieren
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Upload Section */}
@@ -197,10 +207,30 @@ export default function Documents() {
         <h2 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.25rem' }}>Dokument hochladen</h2>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label htmlFor="document-name-input" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                Dokumentname <span style={{ color: '#dc3545' }}>*</span>
+              </label>
+              <input
+                id="document-name-input"
+                type="text"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="Geben Sie einen Namen für das Dokument ein"
+                disabled={uploading}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  border: '1px solid #ced4da',
+                  borderRadius: '4px',
+                  fontSize: '0.95rem'
+                }}
+              />
+            </div>
+            <div>
               <label htmlFor="file-input" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                Datei auswählen
+                Datei auswählen <span style={{ color: '#dc3545' }}>*</span>
               </label>
               <input
                 id="file-input"
@@ -222,18 +252,46 @@ export default function Documents() {
                 </p>
               )}
             </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
               onClick={handleUpload}
-              disabled={!selectedFile || uploading}
+              disabled={!selectedFile || !documentName.trim() || uploading}
               className="btn-primary"
               style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
                 padding: '0.5rem 1.5rem',
                 whiteSpace: 'nowrap',
-                opacity: (!selectedFile || uploading) ? 0.6 : 1,
-                cursor: (!selectedFile || uploading) ? 'not-allowed' : 'pointer'
+                opacity: (!selectedFile || !documentName.trim() || uploading) ? 0.6 : 1,
+                cursor: (!selectedFile || !documentName.trim() || uploading) ? 'not-allowed' : 'pointer'
               }}
             >
-              {uploading ? 'Wird hochgeladen...' : 'Hochladen'}
+              {uploading ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="spinning" style={{ display: 'inline-block' }}>
+                    <path d="M12 2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M12 18V22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M4.93 4.93L7.76 7.76" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M16.24 16.24L19.07 19.07" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M2 12H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M18 12H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M4.93 19.07L7.76 16.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M16.24 7.76L19.07 4.93" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  Wird hochgeladen...
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M7 10L12 15L17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Hochladen
+                </>
+              )}
             </button>
           </div>
 
@@ -309,7 +367,14 @@ export default function Documents() {
                     <button
                       onClick={() => handleDownload(doc)}
                       className="btn-download"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      title="Herunterladen"
                     >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M7 10L12 15L17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
                       Herunterladen
                     </button>
                   </td>
