@@ -218,3 +218,128 @@ class SalesforceService:
         # - Update related records
         
         return new_case
+    
+    def upload_document(self, customer_id: str, file_content: bytes, filename: str, document_type: str = "Document") -> Document:
+        """
+        Upload a document to Salesforce.
+        
+        In production, this would:
+        1. Upload file to Salesforce ContentVersion/ContentDocument
+        2. Link document to customer Account via ContentDocumentLink
+        3. Handle file size limits and validation
+        4. Return Salesforce document ID
+        
+        For MVP, we simulate by:
+        - Saving file to mock directory
+        - Generating a mock document ID
+        - Creating document record in Salesforce format
+        - Appending to documents JSON file
+        - Returning the created document
+        """
+        import uuid
+        import mimetypes
+        
+        # Generate mock document ID (in production, Salesforce returns this)
+        document_id = f"069{str(uuid.uuid4()).replace('-', '')[:15]}"
+        
+        # Determine file type from extension if not provided
+        file_ext = Path(filename).suffix.lower()
+        if not document_type or document_type == "Document":
+            if file_ext in ['.pdf']:
+                document_type = "PDF"
+            elif file_ext in ['.jpg', '.jpeg', '.png', '.gif']:
+                document_type = "Image"
+            elif file_ext in ['.doc', '.docx']:
+                document_type = "Word Document"
+            elif file_ext in ['.xls', '.xlsx']:
+                document_type = "Spreadsheet"
+            else:
+                document_type = "Document"
+        
+        # Save file to mock directory
+        pdf_filename = f"{document_id}.pdf"
+        # For simplicity, we'll save all files as PDFs in the mock
+        # In production, we'd preserve the original file format
+        file_path = self.mock_data_dir / pdf_filename
+        with open(file_path, 'wb') as f:
+            f.write(file_content)
+        
+        # Create document object
+        created_date = datetime.now()
+        download_url = f"/customer/documents/{document_id}/download"
+        
+        new_document = Document(
+            document_id=document_id,
+            customer_id=customer_id,
+            name=filename,
+            type=document_type,
+            download_url=download_url,
+            created_date=created_date
+        )
+        
+        # ============================================
+        # MAPPING LOGIC: Transform to Salesforce format
+        # ============================================
+        # This demonstrates how we would map our internal DTO to Salesforce format
+        salesforce_document_data = {
+            "Id": new_document.document_id,
+            "Title": new_document.name,
+            "FileExtension": file_ext.lstrip('.') if file_ext else "",
+            "ContentSize": len(file_content),
+            "ContentUrl": download_url,
+            "FirstPublishLocationId": customer_id,  # Link to Account
+            "CreatedDate": new_document.created_date.isoformat(),
+            "Type": new_document.type
+        }
+        
+        # Send to Salesforce Mock Endpoint
+        new_document_file = self.mock_data_dir / "new-document.json"
+        with open(new_document_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                "success": True,
+                "id": salesforce_document_data["Id"],
+                "salesforce_document": salesforce_document_data
+            }, f, indent=2, ensure_ascii=False)
+        
+        # Log to console to make mapping logic visible
+        print("\n" + "="*60)
+        print("SALESFORCE MOCK ENDPOINT: New Document Uploaded")
+        print("="*60)
+        print(f"Mapping from internal DTO to Salesforce format:")
+        print(f"  Document ID: '{new_document.document_id}'")
+        print(f"  Customer ID: '{new_document.customer_id}' → Salesforce AccountId: '{salesforce_document_data['FirstPublishLocationId']}'")
+        print(f"  File Name: '{new_document.name}' → Salesforce Title: '{salesforce_document_data['Title']}'")
+        print(f"  File Size: {salesforce_document_data['ContentSize']} bytes")
+        print(f"\nSalesforce Document Data:")
+        print(json.dumps(salesforce_document_data, indent=2, ensure_ascii=False))
+        print("="*60 + "\n")
+        
+        # Update documents JSON file
+        mock_file = self.mock_data_dir / f"documents-{customer_id}.json"
+        if mock_file.exists():
+            with open(mock_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            data = {"documents": []}
+        
+        # Append new document
+        data['documents'].append({
+            "document_id": new_document.document_id,
+            "customer_id": new_document.customer_id,
+            "name": new_document.name,
+            "type": new_document.type,
+            "download_url": new_document.download_url,
+            "created_date": new_document.created_date.isoformat()
+        })
+        
+        # Write back to mock file
+        with open(mock_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        
+        # In production, we would also:
+        # - Upload file to Salesforce ContentVersion
+        # - Create ContentDocumentLink to associate with Account
+        # - Handle file versioning
+        # - Trigger notifications/webhooks
+        
+        return new_document

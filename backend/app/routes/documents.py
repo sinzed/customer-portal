@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from pathlib import Path
-from app.models.document import DocumentListResponse
+from app.models.document import DocumentListResponse, Document
 from app.models.user import User
 from app.core.dependencies import get_current_user
 from app.services.salesforce_service import SalesforceService
@@ -94,3 +94,70 @@ async def get_customer_documents(
         return DocumentListResponse(documents=documents)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving documents: {str(e)}")
+
+
+@router.post("/{customer_id}/documents", response_model=Document, status_code=status.HTTP_201_CREATED)
+async def upload_document(
+    customer_id: str,
+    file: UploadFile = File(...),
+    document_type: str = Form(None),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upload a document for a customer and sync it to Salesforce.
+    
+    Requires authentication. Users can only upload documents for their own account.
+    The document will be synced to Salesforce via the SalesforceService.
+    """
+    # Ensure user can only upload to their own account
+    if str(current_user.user_id) != customer_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only upload documents to your own account"
+        )
+    
+    # Validate file
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File name is required"
+        )
+    
+    # Read file content
+    try:
+        file_content = await file.read()
+        
+        # Validate file size (e.g., max 10MB)
+        MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+        if len(file_content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE / (1024 * 1024)}MB"
+            )
+        
+        if len(file_content) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File is empty"
+            )
+        
+        # Use provided document type or default
+        doc_type = document_type if document_type else "Document"
+        
+        # Upload to Salesforce via service
+        document = salesforce_service.upload_document(
+            customer_id=customer_id,
+            file_content=file_content,
+            filename=file.filename,
+            document_type=doc_type
+        )
+        
+        return document
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error uploading document: {str(e)}"
+        )

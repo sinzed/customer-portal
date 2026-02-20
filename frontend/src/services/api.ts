@@ -70,10 +70,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
 /**
  * Create headers with authentication token if available
  */
-function createHeaders(includeAuth: boolean = true): HeadersInit {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
+function createHeaders(includeAuth: boolean = true, contentType: string = 'application/json'): HeadersInit {
+  const headers: HeadersInit = {};
+
+  // Only set Content-Type if not multipart/form-data (browser will set it with boundary)
+  if (contentType !== 'multipart/form-data') {
+    headers['Content-Type'] = contentType;
+  }
 
   if (includeAuth) {
     const token = getAuthToken();
@@ -134,5 +137,33 @@ export const api = {
       body: JSON.stringify(caseData),
     });
     return handleResponse<CaseCreateResponse>(response);
+  },
+
+  /**
+   * Upload a document for a customer
+   * Uses authenticated user's ID if customerId is not provided
+   */
+  async uploadDocument(
+    file: File,
+    documentType?: string,
+    customerId?: string
+  ): Promise<Document> {
+    const userId = customerId || getUserId();
+    if (!userId) {
+      throw new ApiError('User not authenticated', 401);
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    if (documentType) {
+      formData.append('document_type', documentType);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/customer/${userId}/documents`, {
+      method: 'POST',
+      headers: createHeaders(true, 'multipart/form-data'),
+      body: formData,
+    });
+    return handleResponse<Document>(response);
   },
 };
