@@ -20,6 +20,7 @@ interface FormData {
 
 interface FormErrors {
   subject?: string;
+  description?: string;
 }
 
 type SubmitStatus = 'success' | 'error' | null;
@@ -37,6 +38,12 @@ export default function CreateCase() {
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
+    
+    // Enforce 500 character limit for description
+    if (name === 'description' && value.length > 500) {
+      return;
+    }
+    
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
     if (errors[name as keyof FormErrors]) {
@@ -50,6 +57,10 @@ export default function CreateCase() {
     
     if (!formData.subject || !formData.subject.trim()) {
       newErrors.subject = 'Betreff ist erforderlich';
+    }
+    
+    if (!formData.description || !formData.description.trim()) {
+      newErrors.description = 'Beschreibung ist erforderlich';
     }
     
     setErrors(newErrors);
@@ -118,7 +129,9 @@ export default function CreateCase() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="description">Beschreibung (optional)</label>
+          <label htmlFor="description">
+            Beschreibung <span className="required">*</span>
+          </label>
           <textarea
             id="description"
             name="description"
@@ -127,7 +140,23 @@ export default function CreateCase() {
             rows={6}
             placeholder="Detaillierte Beschreibung des Anliegens"
             disabled={submitting}
+            className={errors.description ? 'error' : ''}
+            maxLength={500}
           />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', minHeight: '1.5rem' }}>
+            {errors.description ? (
+              <span className="error-message">{errors.description}</span>
+            ) : (
+              <span></span>
+            )}
+            <span style={{ 
+              fontSize: '0.875rem', 
+              color: formData.description.length > 450 ? '#dc3545' : '#6c757d',
+              fontWeight: formData.description.length > 450 ? '500' : 'normal'
+            }}>
+              {formData.description.length} / 500 Zeichen
+            </span>
+          </div>
         </div>
 
         {submitStatus === 'success' && (
@@ -145,7 +174,7 @@ export default function CreateCase() {
         <button
           type="submit"
           className="btn-submit"
-          disabled={submitting}
+          disabled={submitting || !formData.subject.trim() || !formData.description.trim()}
         >
           {submitting ? 'Wird gesendet...' : 'Ticket erstellen'}
         </button>
